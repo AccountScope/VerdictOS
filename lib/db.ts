@@ -68,5 +68,64 @@ export const db = {
 
     if (error) throw error
     return rule
+  },
+
+  createApproval: async (data: any) => {
+    const { data: approval, error } = await supabase
+      .from('approvals')
+      .insert({
+        action_id: data.action_id,
+        client_id: data.client_id,
+        status: 'pending',
+        requires_all_steps: data.requires_all_steps || true
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return approval
+  },
+
+  updateApproval: async (approvalId: string, status: string) => {
+    const { data, error } = await supabase
+      .from('approvals')
+      .update({ status, resolved_at: new Date().toISOString() })
+      .eq('id', approvalId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  createWebhookDelivery: async (data: any) => {
+    const { data: delivery, error } = await supabase
+      .from('webhook_deliveries')
+      .insert({
+        webhook_endpoint_id: data.webhook_endpoint_id,
+        client_id: data.client_id,
+        action_id: data.action_id,
+        delivery_status: data.delivery_status || 'pending',
+        delivery_attempt: data.delivery_attempt || 1,
+        response_status: data.response_status,
+        response_body: data.response_body,
+        idempotency_key: data.idempotency_key
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return delivery
+  },
+
+  getWebhookEndpoints: async (clientId: string) => {
+    const { data, error } = await supabase
+      .from('webhook_endpoints')
+      .select('*')
+      .eq('client_id', clientId)
+      .eq('is_active', true)
+
+    if (error) throw error
+    return data || []
   }
 }

@@ -4,15 +4,17 @@ import { db } from '@/lib/db'
 
 // Example CRUD skeleton
 
-export const GET = requireApiKey(async () => {
-  const rules = await db.listRules()
-  return NextResponse.json(rules)
+export const GET = requireApiKey(async (req: NextRequest) => {
+  const clientId = (req as any).clientId
+  const rules = await db.listRules(clientId)
+  return NextResponse.json({ success: true, data: rules })
 })
 
 export const POST = requireApiKey(async (req: NextRequest) => {
-  const data = await req.json()
-  const rule = await db.createRule(data)
-  return NextResponse.json(rule, { status: 201 })
+  const clientId = (req as any).clientId
+  const body = await req.json()
+  const rule = await db.createRule({ ...body, client_id: clientId })
+  return NextResponse.json({ success: true, data: rule }, { status: 201 })
 })
 
 // add PUT/PATCH/DELETE as needed

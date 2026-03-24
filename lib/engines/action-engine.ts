@@ -60,13 +60,34 @@ export class ActionEngine {
         }
       })
       
-      // 5. If requires approval, create approval record
+      // 5. If requires approval, create approval record and send email
       if (requires_approval) {
-        await db.createApproval({
+        const approval = await db.createApproval({
           action_id: storedAction.id,
           client_id: data.client_id,
           requires_all_steps: true
         })
+        
+        // Send approval email
+        try {
+          const { sendApprovalEmail } = await import('@/lib/email')
+          const approverEmail = data.approver_email || process.env.DEFAULT_APPROVER_EMAIL || 'admin@verdictos.tech'
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.verdictos.tech'
+          
+          await sendApprovalEmail({
+            to: approverEmail,
+            actionId: storedAction.id,
+            actionType: data.action_type,
+            riskScore: risk,
+            reason,
+            approveUrl: `${baseUrl}/api/v1/approvals/${approval.id}/approve?token=placeholder`,
+            rejectUrl: `${baseUrl}/api/v1/approvals/${approval.id}/reject?token=placeholder`,
+            payload: data.payload
+          })
+        } catch (emailErr) {
+          console.error('[ActionEngine] Failed to send approval email:', emailErr)
+          // Don't fail the action if email fails
+        }
       }
       
       return {

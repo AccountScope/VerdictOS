@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VerdictOS API Playground</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      padding: 40px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      margin-bottom: 20px;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    textarea {
+      font-family: 'Monaco', 'Courier New', monospace;
+      min-height: 150px;
+      resize: vertical;
+    }
+    .button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+    .button:active {
+      transform: translateY(0);
+    }
+    .button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .result {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid;
+    }
+    .result.allow {
+      background: #e8f5e9;
+      border-color: #4caf50;
+      color: #2e7d32;
+    }
+    .result.block {
+      background: #ffebee;
+      border-color: #f44336;
+      color: #c62828;
+    }
+    .result.approval {
+      background: #fff3e0;
+      border-color: #ff9800;
+      color: #e65100;
+    }
+    .result-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .result-detail {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+    .json-output {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin-top: 15px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .examples {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .example-btn {
+      padding: 8px 16px;
+      border: 2px solid #667eea;
+      background: white;
+      color: #667eea;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .example-btn:hover {
+      background: #667eea;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>🎮 VerdictOS API Playground</h1>
+      <p class="subtitle">Test API actions and see real-time decisions</p>
+
+      <div class="examples">
+        <button class="example-btn" onclick="loadExample('low_risk')">Low Risk Payment</button>
+        <button class="example-btn" onclick="loadExample('high_risk')">High Risk Payment</button>
+        <button class="example-btn" onclick="loadExample('blocked')">Blocked Action</button>
+        <button class="example-btn" onclick="loadExample('healthcare')">Healthcare</button>
+        <button class="example-btn" onclick="loadExample('legal')">Legal</button>
+      </div>
+
+      <div class="grid">
+        <div>
+          <label>API Key</label>
+          <input type="password" id="apiKey" placeholder="sk_live_...">
+        </div>
+        <div>
+          <label>Client ID</label>
+          <input type="text" id="clientId" placeholder="00000000-0000-0000-0000-000000000001">
+        </div>
+      </div>
+
+      <label>Action Type</label>
+      <select id="actionType">
+        <option value="send_payment">send_payment</option>
+        <option value="prescribe_medication">prescribe_medication</option>
+        <option value="file_motion">file_motion</option>
+        <option value="delete_user">delete_user</option>
+        <option value="grant_access">grant_access</option>
+        <option value="custom">Custom...</option>
+      </select>
+
+      <label>Payload (JSON)</label>
+      <textarea id="payload">{ 
+  "amount": 5000,
+  "recipient": "vendor@example.com",
+  "currency": "USD"
+}</textarea>
+
+      <label>Requested By</label>
+      <input type="text" id="requestedBy" placeholder="john@company.com">
+
+      <button class="button" onclick="submitAction()">Submit Action</button>
+
+      <div id="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const examples = {
+      low_risk: {
+        type: 'send_payment',
+        payload: {
+          amount: 5000,
+          recipient: 'vendor@example.com',
+          currency: 'USD'
+        }
+      },
+      high_risk: {
+        type: 'send_payment',
+        payload: {
+          amount: 250000,
+          recipient: 'new-vendor@example.com',
+          recipient_history: 'first_transaction',
+          currency: 'USD'
+        }
+      },
+      blocked: {
+        type: 'delete_user',
+        payload: {
+          user_id: 'admin_user_123',
+          force: true
+        }
+      },
+      healthcare: {
+        type: 'prescribe_medication',
+        payload: {
+          drug_name: 'Oxycodone',
+          drug_class: 'controlled_substance',
+          dosage: '10mg',
+          patient_history: {
+            substance_abuse_history: false
+          }
+        }
+      },
+      legal: {
+        type: 'file_motion',
+        payload: {
+          opposing_party: 'Acme Corp',
+          document_classification: 'attorney_client_privileged',
+          matter_value: 500000
+        }
+      }
+    }
+
+    function loadExample(name) {
+      const ex = examples[name]
+      document.getElementById('actionType').value = ex.type
+      document.getElementById('payload').value = JSON.stringify(ex.payload, null, 2)
+    }
+
+    async function submitAction() {
+      const apiKey = document.getElementById('apiKey').value
+      const clientId = document.getElementById('clientId').value
+      const actionType = document.getElementById('actionType').value
+      const payload = document.getElementById('payload').value
+      const requestedBy = document.getElementById('requestedBy').value
+
+      if (!apiKey || !clientId) {
+        alert('Please enter API Key and Client ID')
+        return
+      }
+
+      let parsedPayload
+      try {
+        parsedPayload = JSON.parse(payload)
+      } catch (err) {
+        alert('Invalid JSON in payload')
+        return
+      }
+
+      const resultDiv = document.getElementById('result')
+      resultDiv.innerHTML = '<p>Loading...</p>'
+
+      try {
+        const response = await fetch('https://api.verdictos.tech/api/v1/actions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey,
+            'X-Client-ID': clientId,
+            'Idempotency-Key': `playground-${Date.now()}`
+          },
+          body: JSON.stringify({
+            action_type: actionType,
+            requested_by: requestedBy || 'playground@verdictos.tech',
+            payload: parsedPayload
+          })
+        })
+
+        const result = await response.json()
+        displayResult(result)
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="result block"><div class="result-title">❌ Error</div><div class="result-detail">${err.message}</div></div>`
+      }
+    }
+
+    function displayResult(result) {
+      const data = result.data
+      const decision = data.decision
+      
+      let className = 'block'
+      let icon = '❌'
+      if (decision === 'ALLOW') {
+        className = 'allow'
+        icon = '✅'
+      } else if (decision === 'REQUIRE_APPROVAL') {
+        className = 'approval'
+        icon = '⏳'
+      }
+
+      const html = `
+        <div class="result ${className}">
+          <div class="result-title">${icon} ${decision}</div>
+          <div class="result-detail"><strong>Risk Score:</strong> ${data.risk_score} (${data.numeric_score}/100)</div>
+          <div class="result-detail"><strong>Explanation:</strong> ${data.explanation}</div>
+          ${data.triggered_rules.length > 0 ? `<div class="result-detail"><strong>Triggered Rules:</strong> ${data.triggered_rules.join(', ')}</div>` : ''}
+          <div class="result-detail"><strong>Action ID:</strong> ${data.action_id}</div>
+          <div class="json-output">${JSON.stringify(result, null, 2)}</div>
+        </div>
+      `
+      document.getElementById('result').innerHTML = html
+    }
+  </script>
+</body>
+</html>

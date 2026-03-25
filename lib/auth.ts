@@ -4,12 +4,13 @@ import bcrypt from 'bcrypt'
 
 export function requireApiKey(handler: Function) {
   return async (req: NextRequest, ...args: any[]) => {
-    const apiKey = req.headers.get('x-api-key')
-    const clientId = req.headers.get('x-client-id')
+    try {
+      const apiKey = req.headers.get('x-api-key')
+      const clientId = req.headers.get('x-client-id')
 
-    if (!apiKey || !clientId) {
-      return NextResponse.json({ error: 'Missing API key or client ID' }, { status: 401 })
-    }
+      if (!apiKey || !clientId) {
+        return NextResponse.json({ error: 'Missing API key or client ID' }, { status: 401 })
+      }
 
     // Get all non-revoked keys for this client
     const { data: keys, error: keysError } = await supabase
@@ -59,5 +60,12 @@ export function requireApiKey(handler: Function) {
     ;(req as any).apiKeyId = validKey.id
 
     return handler(req, ...args)
+    } catch (error: any) {
+      console.error('[Auth] Error:', error)
+      return NextResponse.json({ 
+        error: 'Authentication error', 
+        details: error.message 
+      }, { status: 500 })
+    }
   }
 }

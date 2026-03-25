@@ -20,9 +20,9 @@ export const db = {
         metadata: data.metadata || {},
         requested_by: data.requested_by,
         idempotency_key: data.idempotency_key,
-        status: 'pending',
-        risk_score: 'LOW', // TODO: Calculate risk
-        requires_approval: false // TODO: Apply rules
+        status: data.status || 'pending',
+        risk_score: data.risk_score || 'LOW',
+        requires_approval: data.requires_approval || false
       })
       .select()
       .single()

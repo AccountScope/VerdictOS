@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TokenManager } from '@/lib/tokens'
+import { supabase } from '@/lib/db'
 
 // TEST ONLY - Generate token for approval testing
 export async function POST(req: NextRequest) {
@@ -9,6 +10,12 @@ export async function POST(req: NextRequest) {
     if (!approval_id) {
       return NextResponse.json({ error: 'Missing approval_id' }, { status: 400 })
     }
+    
+    // Delete existing token (for testing)
+    await supabase
+      .from('approval_tokens')
+      .delete()
+      .eq('approval_id', approval_id)
     
     // Generate a fresh token
     const token = await TokenManager.createApprovalToken(approval_id, 1) // 1 hour expiry

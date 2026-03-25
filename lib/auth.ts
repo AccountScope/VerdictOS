@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from './db'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 export function requireApiKey(handler: Function) {
   return async (req: NextRequest, ...args: any[]) => {

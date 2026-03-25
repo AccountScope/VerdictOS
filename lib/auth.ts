@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from './db'
-import crypto from 'crypto'
+import bcrypt from 'bcrypt'
 
 export function requireApiKey(handler: Function) {
   return async (req: NextRequest, ...args: any[]) => {
@@ -11,19 +11,28 @@ export function requireApiKey(handler: Function) {
       return NextResponse.json({ error: 'Missing API key or client ID' }, { status: 401 })
     }
 
-    // Hash the provided key (in production, use bcrypt/argon2)
-    const keyHash = crypto.createHash('md5').update(apiKey).digest('hex')
-
-    // Validate against database
-    const { data, error } = await supabase
+    // Get all non-revoked keys for this client
+    const { data: keys, error: keysError } = await supabase
       .from('api_keys')
       .select('*')
       .eq('client_id', clientId)
-      .eq('key_hash', keyHash)
       .eq('is_revoked', false)
-      .single()
 
-    if (error || !data) {
+    if (keysError || !keys || keys.length === 0) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if provided key matches any stored hash
+    let validKey = null
+    for (const key of keys) {
+      const isValid = await bcrypt.compare(apiKey, key.key_hash)
+      if (isValid) {
+        validKey = key
+        break
+      }
+    }
+
+    if (!validKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -31,11 +40,11 @@ export function requireApiKey(handler: Function) {
     await supabase
       .from('api_keys')
       .update({ last_used: new Date().toISOString() })
-      .eq('id', data.id)
+      .eq('id', validKey.id)
 
     // Attach client context to request
     ;(req as any).clientId = clientId
-    ;(req as any).apiKeyId = data.id
+    ;(req as any).apiKeyId = validKey.id
 
     return handler(req, ...args)
   }

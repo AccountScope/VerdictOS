@@ -26,10 +26,12 @@ export const POST = requireApiKey(
   withIdempotency(async (req: NextRequest) => {
     const body = await req.json()
     
-    try {
-      validateAction(body)
-    } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+    const validation = validateAction(body)
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: validation.message,
+        errors: validation.errors 
+      }, { status: 400 })
     }
 
     const clientId = (req as any).clientId

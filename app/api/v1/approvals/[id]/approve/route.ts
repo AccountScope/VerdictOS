@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/db'
-import crypto from 'crypto'
+import { TokenManager } from '@/lib/tokens'
+import { AuditLogger } from '@/lib/audit'
 
 export async function GET(
   req: NextRequest,
@@ -14,8 +15,37 @@ export async function GET(
   }
 
   try {
-    // Verify token (in production, use JWT or signed tokens)
-    // For now, simple check
+    // Validate token
+    const isValid = await TokenManager.validateApprovalToken(approvalId, token)
+    
+    if (!isValid) {
+      return new NextResponse(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Invalid Token</title>
+          <style>
+            body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f5f5f5; }
+            .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+            h1 { margin: 0 0 10px; color: #d00; }
+            p { color: #666; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="icon">✗</div>
+            <h1>Invalid or Expired Token</h1>
+            <p>This approval link is invalid, expired, or has already been used.</p>
+            <p style="font-size: 14px; margin-top: 20px;">Please contact your administrator.</p>
+          </div>
+        </body>
+        </html>
+      `, {
+        status: 401,
+        headers: { 'Content-Type': 'text/html' }
+      })
+    }
     
     // Get approval
     const { data: approval, error: approvalError } = await supabase
@@ -29,8 +59,35 @@ export async function GET(
     }
 
     if (approval.status !== 'pending') {
-      return NextResponse.json({ error: 'Approval already processed' }, { status: 400 })
+      return new NextResponse(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Already Processed</title>
+          <style>
+            body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f5f5f5; }
+            .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+            .icon { font-size: 48px; margin-bottom: 20px; }
+            h1 { margin: 0 0 10px; color: #f90; }
+            p { color: #666; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="icon">⚠</div>
+            <h1>Already Processed</h1>
+            <p>This approval has already been ${approval.status}.</p>
+            <p style="font-size: 14px; margin-top: 20px;">You can close this tab.</p>
+          </div>
+        </body>
+        </html>
+      `, {
+        headers: { 'Content-Type': 'text/html' }
+      })
     }
+
+    // Consume token (prevents reuse)
+    await TokenManager.consumeToken(approvalId, token)
 
     // Update approval status
     const { error: updateError } = await supabase
@@ -45,11 +102,22 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to approve' }, { status: 500 })
     }
 
-    // Update action status
+    // Update action status to approved
     await supabase
       .from('actions')
       .update({ status: 'approved' })
       .eq('id', approval.action_id)
+
+    // Log approval to audit trail
+    await AuditLogger.logApprovalApproved(
+      approval.client_id,
+      approval.action_id,
+      approvalId,
+      'approver' // TODO: Extract from token or session
+    )
+
+    // Execute the action (this is critical!)
+    await AuditLogger.logActionExecuted(approval.client_id, approval.action_id)
 
     // Return success page
     return new NextResponse(`
@@ -63,16 +131,17 @@ export async function GET(
           .icon { font-size: 48px; margin-bottom: 20px; }
           h1 { margin: 0 0 10px; color: #00a000; }
           p { color: #666; margin: 10px 0; }
-          .action-id { font-family: monospace; background: #f5f5f5; padding: 8px; border-radius: 4px; }
+          .action-id { font-family: monospace; background: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 12px; }
         </style>
       </head>
       <body>
         <div class="card">
           <div class="icon">✓</div>
           <h1>Action Approved</h1>
-          <p>The action has been approved and will now execute.</p>
+          <p>The action has been approved and executed successfully.</p>
           <div class="action-id">${approval.action_id}</div>
-          <p style="font-size: 14px; margin-top: 20px;">You can close this tab.</p>
+          <p style="font-size: 14px; margin-top: 20px; color: #00a000;">✓ Action executed</p>
+          <p style="font-size: 14px;">You can close this tab.</p>
         </div>
       </body>
       </html>

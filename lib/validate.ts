@@ -1,106 +1,75 @@
-import { z } from 'zod'
-
-// Maximum payload size: 1MB (1,048,576 bytes)
-const MAX_PAYLOAD_SIZE = 1 * 1024 * 1024
-
-// Action schema
-const actionSchema = z.object({
-  action_type: z.string().min(1).max(100),
-  requested_by: z.string().email().optional(),
-  approver_email: z.string().email().optional(),
-  payload: z.record(z.any()).refine(
-    (data) => {
-      const size = JSON.stringify(data).length
-      return size <= MAX_PAYLOAD_SIZE
-    },
-    {
-      message: `Payload exceeds maximum size of ${MAX_PAYLOAD_SIZE} bytes (1MB)`
-    }
-  ),
-  metadata: z.record(z.any()).optional()
-})
+// Validation utility (simplified for deployment)
+const MAX_PAYLOAD_SIZE = 1 * 1024 * 1024 // 1MB
 
 export function validateAction(data: any) {
-  try {
-    const result = actionSchema.parse(data)
-    return { success: true, data: result }
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      const errors = err.errors.map(e => ({
-        field: e.path.join('.'),
-        message: e.message
-      }))
-      return {
-        success: false,
-        errors,
-        message: errors[0]?.message || 'Validation failed'
-      }
-    }
-    return {
-      success: false,
-      message: 'Validation failed'
+  const errors = []
+  
+  if (!data.action_type) {
+    errors.push({ field: 'action_type', message: 'action_type is required' })
+  } else if (typeof data.action_type !== 'string' || data.action_type.length > 100) {
+    errors.push({ field: 'action_type', message: 'action_type must be a string (max 100 chars)' })
+  }
+  
+  if (data.requested_by && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.requested_by)) {
+    errors.push({ field: 'requested_by', message: 'requested_by must be a valid email' })
+  }
+  
+  if (data.approver_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.approver_email)) {
+    errors.push({ field: 'approver_email', message: 'approver_email must be a valid email' })
+  }
+  
+  if (!data.payload) {
+    errors.push({ field: 'payload', message: 'payload is required' })
+  } else {
+    const payloadSize = JSON.stringify(data.payload).length
+    if (payloadSize > MAX_PAYLOAD_SIZE) {
+      errors.push({ field: 'payload', message: `Payload exceeds maximum size of ${MAX_PAYLOAD_SIZE} bytes (1MB)` })
     }
   }
+  
+  if (errors.length > 0) {
+    return {
+      success: false,
+      errors,
+      message: errors[0].message
+    }
+  }
+  
+  return { success: true, data }
 }
-
-// Rule schema
-const ruleSchema = z.object({
-  name: z.string().min(1).max(200),
-  definition: z.record(z.any())
-})
 
 export function validateRule(data: any) {
-  try {
-    const result = ruleSchema.parse(data)
-    return { success: true, data: result }
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      const errors = err.errors.map(e => ({
-        field: e.path.join('.'),
-        message: e.message
-      }))
-      return {
-        success: false,
-        errors,
-        message: errors[0]?.message || 'Validation failed'
-      }
-    }
+  if (!data.name) {
     return {
       success: false,
-      message: 'Validation failed'
+      message: 'name is required',
+      errors: [{ field: 'name', message: 'name is required' }]
     }
   }
+  if (!data.definition) {
+    return {
+      success: false,
+      message: 'definition is required',
+      errors: [{ field: 'definition', message: 'definition is required' }]
+    }
+  }
+  return { success: true, data }
 }
 
-// Webhook schema
-const webhookSchema = z.object({
-  url: z.string().url().refine(
-    (url) => url.startsWith('https://'),
-    {
-      message: 'Webhook URL must use HTTPS'
-    }
-  )
-})
-
 export function validateWebhook(data: any) {
-  try {
-    const result = webhookSchema.parse(data)
-    return { success: true, data: result }
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      const errors = err.errors.map(e => ({
-        field: e.path.join('.'),
-        message: e.message
-      }))
-      return {
-        success: false,
-        errors,
-        message: errors[0]?.message || 'Validation failed'
-      }
-    }
+  if (!data.url) {
     return {
       success: false,
-      message: 'Validation failed'
+      message: 'url is required',
+      errors: [{ field: 'url', message: 'url is required' }]
     }
   }
+  if (!/^https:\/\/.+/.test(data.url)) {
+    return {
+      success: false,
+      message: 'url must use HTTPS',
+      errors: [{ field: 'url', message: 'url must use HTTPS' }]
+    }
+  }
+  return { success: true, data }
 }

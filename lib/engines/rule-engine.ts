@@ -1,7 +1,7 @@
 // Rule Engine - Actual Rule Evaluation
 import { db } from '@/lib/db'
 
-export type RiskScore = 'LOW' | 'MEDIUM' | 'HIGH'
+export type RiskScore = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
 export interface RuleEvaluation {
   decision: 'ALLOW' | 'BLOCK' | 'REQUIRE_APPROVAL'
@@ -55,11 +55,11 @@ export class RuleEngine {
         }
       }
       
-      // Default: high-risk actions require approval
-      if (risk === 'HIGH' && finalDecision === 'ALLOW') {
+      // Default: high-risk and critical actions require approval
+      if ((risk === 'HIGH' || risk === 'CRITICAL') && finalDecision === 'ALLOW') {
         finalDecision = 'REQUIRE_APPROVAL'
-        reason = 'High-risk action requires approval'
-        triggered.push('default-high-risk-policy')
+        reason = risk === 'CRITICAL' ? 'Critical-risk action requires multi-level approval' : 'High-risk action requires approval'
+        triggered.push(`default-${risk.toLowerCase()}-risk-policy`)
       }
       
       return {

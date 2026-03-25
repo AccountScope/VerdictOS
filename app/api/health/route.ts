@@ -6,7 +6,8 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     env_check: {
       supabase_url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      service_role: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      service_role: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      resend_api_key: !!process.env.RESEND_API_KEY
     }
   })
 }

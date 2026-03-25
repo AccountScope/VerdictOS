@@ -25,7 +25,19 @@ export function requireApiKey(handler: Function) {
     // Check if provided key matches any stored hash
     let validKey = null
     for (const key of keys) {
-      const isValid = await bcrypt.compare(apiKey, key.key_hash)
+      // Support both bcrypt (new) and MD5 (legacy) for migration
+      let isValid = false
+      
+      // Try bcrypt first (starts with $2b$)
+      if (key.key_hash.startsWith('$2b$')) {
+        isValid = await bcrypt.compare(apiKey, key.key_hash)
+      } else {
+        // Legacy MD5 check
+        const crypto = require('crypto')
+        const md5Hash = crypto.createHash('md5').update(apiKey).digest('hex')
+        isValid = md5Hash === key.key_hash
+      }
+      
       if (isValid) {
         validKey = key
         break

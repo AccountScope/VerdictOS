@@ -1,6 +1,7 @@
 // Action Engine - Real Execution Control
 import { RuleEngine } from './rule-engine'
 import { RiskEngine } from './risk-engine'
+import { ScenarioManager } from '../scenarios/scenario-manager'
 import { db } from '@/lib/db'
 import { AuditLogger } from '@/lib/audit'
 import { TokenManager } from '@/lib/tokens'
@@ -54,6 +55,49 @@ export class ActionEngine {
 
   static async processAction(data: any, clientIndustry?: string, clientRegion?: string): Promise<ActionResult> {
     try {
+      // 0. Check if action matches a pre-defined scenario
+      let matchedScenario = null
+      if (clientIndustry) {
+        matchedScenario = await ScenarioManager.matchScenario(data, clientIndustry)
+        
+        // If scenario matches and is auto-approve, skip risk/rule evaluation
+        if (matchedScenario && matchedScenario.auto_approve) {
+          const storedAction = await db.insertAction({
+            ...data,
+            risk_score: 'LOW',
+            status: 'allowed',
+            requires_approval: false,
+            metadata: {
+              ...data.metadata,
+              scenario_id: matchedScenario.id,
+              scenario_name: matchedScenario.name,
+              auto_approved: true
+            }
+          })
+          
+          await AuditLogger.logActionCreated(data.client_id, storedAction.id, {
+            action_type: data.action_type,
+            risk_score: 'LOW',
+            decision: 'ALLOW',
+            scenario: matchedScenario.id
+          })
+          
+          await AuditLogger.logActionAllowed(data.client_id, storedAction.id)
+          
+          return {
+            action_id: storedAction.id,
+            allowed: true,
+            decision: 'ALLOW',
+            risk_score: 'LOW',
+            numeric_score: 0,
+            reason: `Matched scenario: ${matchedScenario.name}`,
+            triggered_rules: [],
+            requires_approval: false,
+            explanation: `✅ Auto-approved: Matched pre-approved scenario "${matchedScenario.name}". ${matchedScenario.description}`
+          }
+        }
+      }
+      
       // 1. Calculate risk score (with industry + region if provided)
       const riskResult = await RiskEngine.score(data, clientIndustry, clientRegion)
       const risk = riskResult.score

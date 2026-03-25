@@ -1,0 +1,138 @@
+{
+  "industry": "healthcare",
+  "name": "Healthcare Risk Model",
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "healthcare.controlled_substance",
+      "name": "Controlled Substance Prescription",
+      "description": "Opioids and controlled substances require physician approval",
+      "condition": {
+        "field": "payload.drug_class",
+        "operator": "equals",
+        "value": "controlled_substance"
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["attending_physician", "pharmacist"]
+    },
+    {
+      "id": "healthcare.drug_interaction",
+      "name": "Drug Interaction Warning",
+      "description": "Potential drug interaction detected",
+      "condition": {
+        "field": "payload.drug_interaction_risk",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["attending_physician"],
+      "clinical_warning": true
+    },
+    {
+      "id": "healthcare.patient_risk_factor",
+      "name": "Patient Risk Factor",
+      "description": "Patient has high-risk history",
+      "condition": {
+        "field": "payload.patient_history.substance_abuse_history",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["attending_physician", "addiction_specialist"]
+    },
+    {
+      "id": "healthcare.phi_access",
+      "name": "Protected Health Information Access",
+      "description": "PHI access requires justification",
+      "condition": {
+        "field": "payload.data_type",
+        "operator": "equals",
+        "value": "phi"
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["department_head"]
+    },
+    {
+      "id": "healthcare.dosage_exceeds_limit",
+      "name": "Dosage Exceeds Maximum",
+      "description": "Prescribed dosage exceeds safe limits",
+      "condition": {
+        "field": "payload.dosage_exceeds_max",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["attending_physician", "chief_medical_officer"]
+    },
+    {
+      "id": "healthcare.off_label_use",
+      "name": "Off-Label Prescription",
+      "description": "Medication prescribed for non-approved use",
+      "condition": {
+        "field": "payload.off_label",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["attending_physician"]
+    },
+    {
+      "id": "healthcare.emergency_override",
+      "name": "Emergency Override Protocol",
+      "description": "Life-threatening situation allows immediate action with post-approval audit",
+      "condition": {
+        "field": "payload.emergency",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "HIGH",
+      "action": "ALLOW_WITH_AUDIT",
+      "post_approval_required": true
+    }
+  ],
+  "scoring": {
+    "LOW": {
+      "range": [0, 30],
+      "action": "ALLOW"
+    },
+    "MEDIUM": {
+      "range": [31, 60],
+      "action": "REQUIRE_APPROVAL"
+    },
+    "HIGH": {
+      "range": [61, 85],
+      "action": "REQUIRE_APPROVAL",
+      "clinical_review": true
+    },
+    "CRITICAL": {
+      "range": [86, 100],
+      "action": "BLOCK_PENDING_APPROVAL",
+      "multi_approver": true,
+      "clinical_warning": true
+    }
+  },
+  "use_cases": [
+    {
+      "name": "HIPAA Compliance",
+      "description": "PHI access control, audit trails, breach notification"
+    },
+    {
+      "name": "Prescription Approvals",
+      "description": "Drug interaction detection, dosage verification, controlled substances"
+    },
+    {
+      "name": "Clinical Decision Support",
+      "description": "Treatment protocol validation, risk-based escalation"
+    },
+    {
+      "name": "Patient Data Access",
+      "description": "Role-based access control, minimum necessary enforcement"
+    }
+  ]
+}

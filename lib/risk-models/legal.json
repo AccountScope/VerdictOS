@@ -1,0 +1,139 @@
+{
+  "industry": "legal",
+  "name": "Legal Services Risk Model",
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "legal.conflict_of_interest",
+      "name": "Conflict of Interest",
+      "description": "Opposing party matches existing client database",
+      "condition": {
+        "field": "payload.opposing_party",
+        "operator": "in_client_list",
+        "value": "payload.client_list"
+      },
+      "risk_level": "CRITICAL",
+      "action": "BLOCK",
+      "requires_waiver": true,
+      "bar_ethics_rule": "Rule 1.7 - Concurrent Conflicts of Interest"
+    },
+    {
+      "id": "legal.privilege_risk",
+      "name": "Attorney-Client Privilege Risk",
+      "description": "Document contains privileged communications",
+      "condition": {
+        "field": "payload.document_classification",
+        "operator": "equals",
+        "value": "attorney_client_privileged"
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["managing_partner", "general_counsel"]
+    },
+    {
+      "id": "legal.statute_of_limitations",
+      "name": "Statute of Limitations Deadline",
+      "description": "Filing deadline within 7 days",
+      "condition": {
+        "field": "payload.deadline_days_remaining",
+        "operator": "less_than",
+        "value": 7
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["managing_partner"],
+      "urgent": true
+    },
+    {
+      "id": "legal.court_filing",
+      "name": "Court Document Filing",
+      "description": "All court filings require attorney review",
+      "condition": {
+        "field": "payload.document_type",
+        "operator": "equals",
+        "value": "court_filing"
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["attorney_of_record"]
+    },
+    {
+      "id": "legal.new_client_intake",
+      "name": "New Client Conflict Check",
+      "description": "All new clients require conflict screening",
+      "condition": {
+        "field": "payload.client_status",
+        "operator": "equals",
+        "value": "prospective"
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["conflicts_manager", "partner"]
+    },
+    {
+      "id": "legal.high_value_matter",
+      "name": "High-Value Matter",
+      "description": "Cases over $1M in potential damages",
+      "condition": {
+        "field": "payload.matter_value",
+        "operator": "greater_than",
+        "value": 1000000
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["managing_partner"]
+    },
+    {
+      "id": "legal.ethics_violation_risk",
+      "name": "Ethics Violation Risk",
+      "description": "AI flagged potential ethics issue",
+      "condition": {
+        "field": "payload.ethics_risk_score",
+        "operator": "greater_than",
+        "value": 70
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["general_counsel", "managing_partner"]
+    }
+  ],
+  "scoring": {
+    "LOW": {
+      "range": [0, 30],
+      "action": "ALLOW"
+    },
+    "MEDIUM": {
+      "range": [31, 60],
+      "action": "REQUIRE_APPROVAL"
+    },
+    "HIGH": {
+      "range": [61, 85],
+      "action": "REQUIRE_APPROVAL",
+      "partner_review": true
+    },
+    "CRITICAL": {
+      "range": [86, 100],
+      "action": "BLOCK_PENDING_APPROVAL",
+      "multi_approver": true,
+      "ethics_review": true
+    }
+  },
+  "use_cases": [
+    {
+      "name": "Privilege Protection",
+      "description": "Privileged document flagging, access control, privilege logs"
+    },
+    {
+      "name": "Conflict Checks",
+      "description": "Automated conflict detection, partner approval workflows, waiver documentation"
+    },
+    {
+      "name": "Document Approvals",
+      "description": "Draft review workflows, version control, signature tracking"
+    },
+    {
+      "name": "Ethics Compliance",
+      "description": "Bar ethics rule checking, deadline management, malpractice prevention"
+    }
+  ]
+}

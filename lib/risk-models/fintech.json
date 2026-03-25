@@ -1,0 +1,137 @@
+{
+  "industry": "fintech",
+  "name": "Financial Services Risk Model",
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "fintech.large_transaction",
+      "name": "Large Transaction Threshold",
+      "description": "High-value payments require approval",
+      "condition": {
+        "field": "payload.amount",
+        "operator": "greater_than",
+        "value": 10000
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["cfo", "finance_manager"]
+    },
+    {
+      "id": "fintech.critical_transaction",
+      "name": "Critical Transaction Threshold",
+      "description": "Very large payments require multi-step approval",
+      "condition": {
+        "field": "payload.amount",
+        "operator": "greater_than",
+        "value": 100000
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["cfo", "ceo"],
+      "multi_step": true
+    },
+    {
+      "id": "fintech.new_recipient",
+      "name": "New Vendor/Recipient",
+      "description": "First-time payments to new recipients",
+      "condition": {
+        "field": "payload.recipient_history",
+        "operator": "equals",
+        "value": "first_transaction"
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["finance_manager"]
+    },
+    {
+      "id": "fintech.geographic_risk",
+      "name": "High-Risk Geography",
+      "description": "Payments to high-risk countries",
+      "condition": {
+        "field": "payload.recipient_country",
+        "operator": "in",
+        "value": ["IR", "KP", "SY", "CU", "VE", "MM"]
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["compliance_officer", "cfo"]
+    },
+    {
+      "id": "fintech.velocity_check",
+      "name": "Transaction Velocity",
+      "description": "Too many transactions in short period",
+      "condition": {
+        "field": "payload.transactions_per_hour",
+        "operator": "greater_than",
+        "value": 10
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["fraud_analyst"]
+    },
+    {
+      "id": "fintech.high_risk_mcc",
+      "name": "High-Risk Merchant Category",
+      "description": "Payments to high-risk merchant types",
+      "condition": {
+        "field": "payload.merchant_category_code",
+        "operator": "in",
+        "value": ["7995", "5967", "7800", "5912"]
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["risk_manager"]
+    },
+    {
+      "id": "fintech.suspicious_pattern",
+      "name": "Fraud Pattern Detected",
+      "description": "AI flagged suspicious activity",
+      "condition": {
+        "field": "payload.fraud_score",
+        "operator": "greater_than",
+        "value": 75
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["fraud_team", "compliance_officer"]
+    }
+  ],
+  "scoring": {
+    "LOW": {
+      "range": [0, 30],
+      "action": "ALLOW"
+    },
+    "MEDIUM": {
+      "range": [31, 60],
+      "action": "REQUIRE_APPROVAL"
+    },
+    "HIGH": {
+      "range": [61, 85],
+      "action": "REQUIRE_APPROVAL",
+      "escalate": true
+    },
+    "CRITICAL": {
+      "range": [86, 100],
+      "action": "BLOCK_PENDING_APPROVAL",
+      "multi_approver": true
+    }
+  },
+  "use_cases": [
+    {
+      "name": "Payment Approvals",
+      "description": "Auto-approve under $10K, require approval $10K-$100K, multi-step for $100K+"
+    },
+    {
+      "name": "Fraud Prevention",
+      "description": "Velocity checks, geographic risk, merchant category screening"
+    },
+    {
+      "name": "PCI DSS Compliance",
+      "description": "Audit trails, two-person authorization for high-value transactions"
+    },
+    {
+      "name": "AML/KYC Controls",
+      "description": "Risk-based customer onboarding, transaction monitoring"
+    }
+  ]
+}

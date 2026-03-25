@@ -17,10 +17,11 @@ export interface ActionResult {
 }
 
 export class ActionEngine {
-  static async processAction(data: any): Promise<ActionResult> {
+  static async processAction(data: any, clientIndustry?: string): Promise<ActionResult> {
     try {
-      // 1. Calculate risk score
-      const risk = await RiskEngine.score(data)
+      // 1. Calculate risk score (with industry if provided)
+      const riskResult = await RiskEngine.score(data, clientIndustry)
+      const risk = riskResult.score
       
       // 2. Evaluate rules
       const ruleResult = await RuleEngine.evaluate(data, risk)
@@ -96,7 +97,7 @@ export class ActionEngine {
         decision,
         risk_score: risk,
         reason,
-        triggered_rules: ruleResult.triggered_rules,
+        triggered_rules: [...ruleResult.triggered_rules, ...riskResult.triggeredRules],
         requires_approval
       }
     } catch (err) {

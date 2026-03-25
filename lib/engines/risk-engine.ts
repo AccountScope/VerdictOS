@@ -24,20 +24,23 @@ interface RiskModel {
 export class RiskEngine {
   private static models: Map<string, RiskModel> = new Map()
 
-  // Load industry risk model
-  static async loadModel(industry: string): Promise<RiskModel | null> {
-    if (this.models.has(industry)) {
-      return this.models.get(industry)!
+  // Load industry risk model with region support
+  static async loadModel(industry: string, region: string = 'US'): Promise<RiskModel | null> {
+    const modelKey = `${industry}-${region.toLowerCase()}`
+    
+    if (this.models.has(modelKey)) {
+      return this.models.get(modelKey)!
     }
 
     try {
-      const modelPath = path.join(process.cwd(), 'lib', 'risk-models', `${industry}.json`)
+      // Try region-specific model first (e.g., fintech-us.json)
+      const modelPath = path.join(process.cwd(), 'lib', 'risk-models', `${modelKey}.json`)
       const modelData = fs.readFileSync(modelPath, 'utf-8')
       const model: RiskModel = JSON.parse(modelData)
-      this.models.set(industry, model)
+      this.models.set(modelKey, model)
       return model
     } catch (error) {
-      console.warn(`No risk model found for industry: ${industry}`)
+      console.warn(`No risk model found for ${industry} in ${region} region`)
       return null
     }
   }
@@ -72,14 +75,14 @@ export class RiskEngine {
     return path.split('.').reduce((current, key) => current?.[key], obj)
   }
 
-  // Main scoring function with industry support
-  static async score(action: any, industry?: string): Promise<{ score: RiskScore, triggeredRules: string[], numericScore: number }> {
+  // Main scoring function with industry + region support
+  static async score(action: any, industry?: string, region?: string): Promise<{ score: RiskScore, triggeredRules: string[], numericScore: number }> {
     let numericScore = 0
     const triggeredRules: string[] = []
 
     // If industry provided, use industry-specific model
     if (industry) {
-      const model = await this.loadModel(industry)
+      const model = await this.loadModel(industry, region || 'US')
       if (model) {
         for (const rule of model.rules) {
           if (this.evaluateCondition(action, rule.condition)) {

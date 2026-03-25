@@ -42,8 +42,19 @@ export const POST = requireApiKey(
     }
 
     try {
-      // Process action through control engine
-      const result = await ActionEngine.processAction(actionData)
+      // Fetch client industry and region from database
+      const { data: client } = await supabase
+        .from('clients')
+        .select('industry, region')
+        .eq('id', clientId)
+        .single()
+      
+      // Process action through control engine (with industry + region)
+      const result = await ActionEngine.processAction(
+        actionData, 
+        client?.industry, 
+        client?.region || 'US'
+      )
       
       logRequest(req, { action: 'create_action', result })
       

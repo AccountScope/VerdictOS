@@ -1,0 +1,145 @@
+{
+  "industry": "healthcare",
+  "region": "UK",
+  "name": "UK Healthcare Risk Model (NHS/CQC)",
+  "version": "1.0",
+  "regulatory_framework": ["CQC", "GMC", "NHS England", "UK GDPR", "Data Protection Act 2018"],
+  "rules": [
+    {
+      "id": "healthcare.uk.controlled_drug",
+      "name": "Controlled Drug (Misuse of Drugs Act)",
+      "description": "Schedule 2/3 controlled drugs require dual authorisation",
+      "condition": {
+        "field": "payload.drug_schedule",
+        "operator": "in",
+        "value": ["Schedule_2", "Schedule_3"]
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["prescriber", "pharmacist"],
+      "regulatory_reference": "Misuse of Drugs Act 1971, Misuse of Drugs Regulations 2001"
+    },
+    {
+      "id": "healthcare.uk.bnf_dosage_limit",
+      "name": "BNF Maximum Dosage Exceeded",
+      "description": "Dosage exceeds British National Formulary limits",
+      "condition": {
+        "field": "payload.exceeds_bnf_max",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["consultant", "clinical_pharmacist"],
+      "regulatory_reference": "BNF (British National Formulary)"
+    },
+    {
+      "id": "healthcare.uk.nice_guidelines",
+      "name": "NICE Guidelines Deviation",
+      "description": "Treatment deviates from NICE clinical guidelines",
+      "condition": {
+        "field": "payload.nice_compliant",
+        "operator": "equals",
+        "value": false
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["consultant"],
+      "regulatory_reference": "NICE (National Institute for Health and Care Excellence)"
+    },
+    {
+      "id": "healthcare.uk.patient_records_access",
+      "name": "Patient Records Access (UK GDPR)",
+      "description": "Access to patient-identifiable data",
+      "condition": {
+        "field": "payload.data_type",
+        "operator": "equals",
+        "value": "patient_identifiable"
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["caldicott_guardian"],
+      "regulatory_reference": "UK GDPR, Data Protection Act 2018, Caldicott Principles"
+    },
+    {
+      "id": "healthcare.uk.mhra_yellow_card",
+      "name": "MHRA Adverse Drug Reaction",
+      "description": "Drug with known serious adverse reactions",
+      "condition": {
+        "field": "payload.mhra_yellow_card",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["consultant", "pharmacist"],
+      "regulatory_reference": "MHRA Yellow Card Scheme"
+    },
+    {
+      "id": "healthcare.uk.gmc_fitness_to_practice",
+      "name": "GMC Prescriber Check",
+      "description": "Prescriber has GMC fitness-to-practice concerns",
+      "condition": {
+        "field": "payload.prescriber_gmc_status",
+        "operator": "equals",
+        "value": "restricted"
+      },
+      "risk_level": "CRITICAL",
+      "action": "BLOCK",
+      "regulatory_reference": "GMC (General Medical Council) fitness to practice"
+    },
+    {
+      "id": "healthcare.uk.nhs_safeguarding",
+      "name": "Safeguarding Alert (Vulnerable Adult/Child)",
+      "description": "Patient flagged on safeguarding register",
+      "condition": {
+        "field": "payload.safeguarding_flag",
+        "operator": "equals",
+        "value": true
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["safeguarding_lead", "consultant"],
+      "regulatory_reference": "Care Act 2014, Children Act 1989"
+    }
+  ],
+  "scoring": {
+    "LOW": {
+      "range": [0, 30],
+      "action": "ALLOW"
+    },
+    "MEDIUM": {
+      "range": [31, 60],
+      "action": "REQUIRE_APPROVAL"
+    },
+    "HIGH": {
+      "range": [61, 85],
+      "action": "REQUIRE_APPROVAL",
+      "clinical_review": true
+    },
+    "CRITICAL": {
+      "range": [86, 100],
+      "action": "BLOCK_PENDING_APPROVAL",
+      "multi_authoriser": true,
+      "clinical_warning": true
+    }
+  },
+  "use_cases": [
+    {
+      "name": "UK GDPR Compliance (NHS)",
+      "description": "Caldicott Guardian approval, patient-identifiable data protection"
+    },
+    {
+      "name": "Controlled Drug Prescribing",
+      "description": "Schedule 2/3 drugs, dual authorisation, CD register"
+    },
+    {
+      "name": "NICE Guideline Adherence",
+      "description": "Clinical decision support aligned with NICE guidance"
+    },
+    {
+      "name": "CQC Compliance",
+      "description": "Safe care, effective treatment, well-led services"
+    }
+  ]
+}

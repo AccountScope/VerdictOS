@@ -1,0 +1,147 @@
+{
+  "industry": "fintech",
+  "region": "UK",
+  "name": "UK Financial Services Risk Model",
+  "version": "1.0",
+  "regulatory_framework": ["FCA", "PSD2", "UK AML", "Data Protection Act 2018"],
+  "rules": [
+    {
+      "id": "fintech.uk.large_transaction",
+      "name": "Large Transaction Threshold (GBP)",
+      "description": "High-value payments require approval",
+      "condition": {
+        "field": "payload.amount",
+        "operator": "greater_than",
+        "value": 10000
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["finance_director", "cfo"],
+      "regulatory_reference": "FCA SYSC 6.1 - Compliance function"
+    },
+    {
+      "id": "fintech.uk.critical_transaction",
+      "name": "Critical Transaction Threshold (GBP)",
+      "description": "Very large payments require multi-authorisation",
+      "condition": {
+        "field": "payload.amount",
+        "operator": "greater_than",
+        "value": 100000
+      },
+      "risk_level": "CRITICAL",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["cfo", "md"],
+      "multi_step": true,
+      "regulatory_reference": "PSD2 Strong Customer Authentication"
+    },
+    {
+      "id": "fintech.uk.new_payee",
+      "name": "New Payee Verification",
+      "description": "First-time payments to new payees (Confirmation of Payee)",
+      "condition": {
+        "field": "payload.payee_history",
+        "operator": "equals",
+        "value": "first_transaction"
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["finance_manager"],
+      "regulatory_reference": "PSR Confirmation of Payee (CoP)"
+    },
+    {
+      "id": "fintech.uk.ofac_sanctions",
+      "name": "OFAC & UK Sanctions Screening",
+      "description": "Payments to sanctioned countries or entities",
+      "condition": {
+        "field": "payload.recipient_country",
+        "operator": "in",
+        "value": ["RU", "BY", "IR", "KP", "SY"]
+      },
+      "risk_level": "CRITICAL",
+      "action": "BLOCK",
+      "approvers": ["mlro", "compliance_officer"],
+      "regulatory_reference": "UK Financial Sanctions, OFAC"
+    },
+    {
+      "id": "fintech.uk.aml_threshold",
+      "name": "Money Laundering Regulations Threshold",
+      "description": "Transactions over £10,000 trigger AML checks",
+      "condition": {
+        "field": "payload.amount",
+        "operator": "greater_than",
+        "value": 10000
+      },
+      "risk_level": "MEDIUM",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["mlro"],
+      "regulatory_reference": "Money Laundering Regulations 2017 (MLR 2017)"
+    },
+    {
+      "id": "fintech.uk.fca_transaction_reporting",
+      "name": "FCA Transaction Reporting",
+      "description": "Large or unusual transactions reportable to FCA",
+      "condition": {
+        "field": "payload.amount",
+        "operator": "greater_than",
+        "value": 250000
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["compliance_officer", "cfo"],
+      "regulatory_reference": "FCA SUP 15.3 - General notification requirements"
+    },
+    {
+      "id": "fintech.uk.faster_payments_limit",
+      "name": "Faster Payments Limit",
+      "description": "UK Faster Payments scheme limit (£1M)",
+      "condition": {
+        "field": "payload.amount",
+        "operator": "greater_than",
+        "value": 1000000
+      },
+      "risk_level": "HIGH",
+      "action": "REQUIRE_APPROVAL",
+      "approvers": ["finance_director"],
+      "regulatory_reference": "UK Faster Payments Service rules"
+    }
+  ],
+  "scoring": {
+    "LOW": {
+      "range": [0, 30],
+      "action": "ALLOW"
+    },
+    "MEDIUM": {
+      "range": [31, 60],
+      "action": "REQUIRE_APPROVAL"
+    },
+    "HIGH": {
+      "range": [61, 85],
+      "action": "REQUIRE_APPROVAL",
+      "escalate": true
+    },
+    "CRITICAL": {
+      "range": [86, 100],
+      "action": "BLOCK_PENDING_APPROVAL",
+      "multi_authoriser": true
+    }
+  },
+  "currency": "GBP",
+  "use_cases": [
+    {
+      "name": "Payment Approvals (UK)",
+      "description": "FCA-compliant approval workflows, Confirmation of Payee (CoP)"
+    },
+    {
+      "name": "AML/KYC (UK MLR 2017)",
+      "description": "MLRO approval for high-value transactions, SAR filing"
+    },
+    {
+      "name": "FCA Compliance",
+      "description": "Transaction reporting, senior management accountability"
+    },
+    {
+      "name": "PSD2 Strong Authentication",
+      "description": "Multi-factor approval for payments over thresholds"
+    }
+  ]
+}

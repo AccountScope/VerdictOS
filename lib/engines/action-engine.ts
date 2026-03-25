@@ -132,12 +132,12 @@ export class ActionEngine {
         // Log approval request to audit trail
         await AuditLogger.logApprovalRequested(data.client_id, storedAction.id, approval.id, approverEmail)
         
-        // Send approval email with secure token
+        // Send approval email with secure token (non-blocking)
         try {
           const { sendApprovalEmail } = await import('@/lib/email')
           const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.verdictos.tech'
           
-          await sendApprovalEmail({
+          const emailResult = await sendApprovalEmail({
             to: approverEmail,
             actionId: storedAction.id,
             actionType: data.action_type,
@@ -147,9 +147,14 @@ export class ActionEngine {
             rejectUrl: `${baseUrl}/api/v1/approvals/${approval.id}/reject?token=${approvalToken}`,
             payload: data.payload
           })
+          
+          if (!emailResult.success) {
+            console.warn('[ActionEngine] Email not sent:', emailResult.reason || 'Unknown reason')
+            // Continue anyway - approval can still be done manually
+          }
         } catch (emailErr) {
-          console.error('[ActionEngine] Failed to send approval email:', emailErr)
-          throw new Error('Failed to send approval email. Please check email configuration.')
+          console.error('[ActionEngine] Email exception:', emailErr)
+          // Continue - don't block approval creation due to email issues
         }
       }
       

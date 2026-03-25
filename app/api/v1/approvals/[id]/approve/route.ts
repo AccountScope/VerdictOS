@@ -50,12 +50,12 @@ export async function GET(
     // Get approval
     const { data: approval, error: approvalError } = await supabase
       .from('approvals')
-      .select('*, actions(*)')
+      .select('*')
       .eq('id', approvalId)
       .single()
 
     if (approvalError || !approval) {
-      return NextResponse.json({ error: 'Approval not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Approval not found', details: approvalError?.message }, { status: 404 })
     }
 
     if (approval.status !== 'pending') {
